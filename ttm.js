@@ -307,11 +307,12 @@ function genHh() {
 function greet(socket) {
 	var nickname = socket.nickname
 	if (specialNicknames.indexOf(nickname)==-1) {
-		say(socket,'Hi '+socket.nickname+', nice to meet you!')
-		say(socket,'I am talktome.')
-		say(socket,'Do you need any help?')
+		say(socket,'Salut '+socket.nickname+', je suis enchanté de faire ta connaissance ! :)')
+		say(socket,'Je m\'appelle talktome.')
+		say(socket,'As-tu besoin d\'aide ?')
+		say(socket,'Si tu crées un compte, je me souviendrai de toi et tu n\'auras plus à entendre ces instructions ! ;)')
 	} else {
-		say(socket,'Welcome back '+nickname+'!')
+		say(socket,'Salut '+nickname+', content de te revoir ! :)')
 	}
 }
 
@@ -494,9 +495,9 @@ function followTutorial(socket, message) {
 
 function launchTutorial(socket) {
 	tutorialPhase[socket.nickname] = 'start'
-	say(socket, 'So '+socket.nickname+', I heard you need help!')
-	say(socket, 'Do not panic, I am here.')
-	say(socket, 'What is your question?')
+	say(socket, 'Alors '+socket.nickname+', on a besoin d\'aide ? :)')
+	say(socket, 'Pas de panique, je suis là.')
+	say(socket, 'Pose-moi ta question.')
 	socket.emit('help_start')
 }
 
@@ -509,10 +510,9 @@ function answer(socket,message) {
 		if (message.toLowerCase().indexOf('yes')!=-1) {
 			launchTutorial(socket)
 		} else if (message.toLowerCase().indexOf('no')!=-1) {
-			say(socket,'Great.')
-			say(socket,'Talk to me anytime!')
+			say(socket,'Super !')
+			say(socket,'N\'hésite pas à me parler.')
 		} else {
-			say(socket,'I can only speak French.')
 			say(socket,'Parlez-moi en français.')
 		}
 		knownNicknames.push(nickname)
@@ -566,9 +566,9 @@ function answer(socket,message) {
 
 function react(socket, message) {
 	var nickname = socket.nickname
-	var reactions = shuffle(['I agree with you, '+nickname+'.','It\'s true!','I think so.',nickname+' is right.','I must disagree here, '+nickname+'.'])
-	var question = shuffle(['I do not know.','I am just a machine.','Well, '+nickname+', let me see...'])
-	var mentioned = shuffle(['My name is talktome, but you can call me ttm.','It\'s me, talktome!','Yes '+nickname+', it is my name','Yes, '+nickname+'?'])
+	var reactions = shuffle(['Je suis d\'accord avec toi, '+nickname+'.','C\'est vrai !','Je crois.',nickname+' a raison.','Je me dois d\'émettre un désaccord, '+nickname+'.'])
+	var question = shuffle(['Je ne sais pas.','Je suis simplement une machine.','Euh, '+nickname+', laisse-moi réfléchir...'])
+	var mentioned = shuffle(['Je m\'appelle talktome, mais tu peux m\'appeler ttm.','c\'est moi, talktome ! :D','Oui '+nickname+', c\'est come ça que je m\'appelle.','Oui, '+nickname+'?'])
 	if (message.indexOf('?')!=-1) {
 		sayAll(socket,question[0])
 		if (Math.random()>0.5) {
@@ -603,7 +603,7 @@ function receive(event,data) {
 			greet(socket)
 			mailbox.forEach(function(mail) {
 				if (socket.nickname==mail.to) {
-					say(socket,'You have a message from '+mail.from+': "'+mail.message+'".')
+					say(socket,'Vous avez un message de '+mail.from+': "'+mail.message+'".')
 					db.ref('ttm/transmit/'+mail.id).set(null)
 				}
 			})
@@ -616,10 +616,10 @@ function receive(event,data) {
 				if (message.toLowerCase().indexOf('yes')!=-1) {
 					launchTutorial(socket)
 				} else if (message.toLowerCase().indexOf('no')!=-1) {
-					say(socket,'Great.')
-					say(socket,'Talk to me anytime!')
+					say(socket,'Super !')
+					say(socket,'N\'hésite pas à me recontacter.')
 				} else {
-					say(socket,'To talk to me, select my name in the "Connected users" list.')
+					say(socket,'Pour me parler, selectionne mon nom dans la liste "Utilisateurs connectés".')
 					infoNicknames.push(nickname)
 				}
 			} else {

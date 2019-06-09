@@ -630,9 +630,13 @@ function receive(event,data) {
 async function getAnswer(socket,message) {
   // A unique identifier for the given session
   const sessionId = uuid.v4()
-
+  const credentials = JSON.parse(process.env.JSON_KEY)
+  
   // Create a new session
-  const sessionClient = new dialogflow.SessionsClient()
+  const sessionClient = new dialogflow.SessionsClient({
+	  projectId,
+	  credentials,
+  })
   const sessionPath = sessionClient.sessionPath(projectId, sessionId)
 
   // The text query request.

@@ -1,10 +1,13 @@
 var moment = require('moment-timezone')
 // Firebase init
 var admin = require('firebase-admin')
+const dialogflow = require('dialogflow')
+const uuid = require('uuid')
+const projectId = process.env.PROJECT_ID
 
 admin.initializeApp({
 	credential: admin.credential.cert({
-		projectId: process.env.PROJECT_ID,
+		projectId: projectId,
 		clientEmail: process.env.CLIENT_EMAIL,
 		privateKey: JSON.parse(process.env.PRIVATE_KEY)
 	}),
@@ -257,27 +260,10 @@ function banWord(word) {
 }*/
 
 function genAnswer(socket,message) {
-	if (messages.filter(function (fromMess) {
-			return fromMess.from != socket.nickname
-		}).length==0) {
-		loadMessages()
-	}
 	if (/(.)\1\1\1/.test(message)) {
 		say(socket,genHh())
 	} else {
-		var used = []
-		var nbMess = randMessNb()
-		messages.some(function (fromMess) {
-			var from = fromMess.from
-			var message = fromMess.message
-			if (from!=socket.nickname) {
-				say(socket,message)
-				used.push(fromMess)
-				--nbMess
-			}
-			return nbMess<=0
-		})
-		removeMessages(used)
+		getAnswer(socket,message)
 	}
 }
 
@@ -636,6 +622,38 @@ function receive(event,data) {
 			break
 	}
 }
+
+/**
+ * Send a query to the dialogflow agent, and return the query result.
+ * @param {string} projectId The project to be used
+ */
+async function getAnswer(socket,message) {
+  // A unique identifier for the given session
+  const sessionId = uuid.v4()
+
+  // Create a new session
+  const sessionClient = new dialogflow.SessionsClient()
+  const sessionPath = sessionClient.sessionPath(projectId, sessionId)
+
+  // The text query request.
+  const request = {
+    session: sessionPath,
+    queryInput: {
+      text: {
+        // The query to send to the dialogflow agent
+        text: message,
+        // The language used by the client
+        languageCode: 'fr-FR',
+      },
+    },
+  }
+
+  // Send request and log result
+  const responses = await sessionClient.detectIntent(request)
+  const result = responses[0].queryResult
+  say(socket, result.fulfillmentText)
+}
+
 
 exports.answer = answer
 exports.greet = greet

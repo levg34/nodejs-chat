@@ -3,3 +3,4 @@ node_modules/
 npm-debug.log
 /data/messages.log
 data/ttm-db-firebase-adminsdk.json
+.project

@@ -19,7 +19,6 @@ var db = admin.database()
 var specialNicknames = []
 var knownNicknames = []
 var infoNicknames = []
-var tutorialPhase = []
 var messages = []
 var allMessages = []
 
@@ -208,7 +207,6 @@ refMB.on("value", function(snapshot) {
 function leaveMessage(from,to,message) {
 	var refMessages = db.ref("ttm/transmit")
 	refMessages.push({from:from,to:to,message:message,time:moment().tz("Europe/Paris").format('HH:mm')})
-	// say(socket,'Your message: "'+message+'" will be sent to '+to+' on next connection.') <--- no socket object
 }
 // /leave message
 
@@ -293,12 +291,10 @@ function genHh() {
 function greet(socket) {
 	var nickname = socket.nickname
 	if (specialNicknames.indexOf(nickname)==-1) {
-		say(socket,'Salut '+socket.nickname+', je suis enchanté de faire ta connaissance ! :)')
-		say(socket,'Je m\'appelle talktome.')
-		say(socket,'As-tu besoin d\'aide ?')
-		say(socket,'Si tu crées un compte, je me souviendrai de toi et tu n\'auras plus à entendre ces instructions ! ;)')
+		getAnswer(socket,'Accueil '+socket.nickname)
+		getAnswer(socket, 'Comment tu t\'appelles ?')
 	} else {
-		say(socket,'Salut '+nickname+', content de te revoir ! :)')
+		getAnswer(socket,'Accueil Ancien '+nickname)
 	}
 }
 
@@ -315,258 +311,50 @@ function sayAll(socket,message) {
 	socket.broadcast.emit('message', {nickname: 'talktome', message: message, time: moment().tz("Europe/Paris").format('HH:mm')})
 }
 
-function phaseTutorial(nickname) {
-	return tutorialPhase[nickname]
-}
-
-function finishTutorial(nickname) {
-	delete tutorialPhase[nickname]
-}
-
-function didntGetAnswer(socket) {
-	var didntGetIt = shuffle(['I did not understand your request.', 'I only speak English.', 'Could you be clearer?', 'I am sorry, could you rephrase that?'])
-	say(socket, didntGetIt[0])
-}
-
-// send, change dest
-function explainBasics(socket) {
-	say(socket, 'If you send a message, it will be sent to everyone connected to the chat,')
-	say(socket, 'including myself!')
-	sendImage(socket,'/img/send_all.gif')
-	say(socket, 'To talk to someone privately, click on his/her nickname on the "Connected users" list.')
-	sendImage(socket,'/img/send_one.gif')
-	say(socket, 'To talk to someone else, just click on his/her nickname on the "Connected users" list.')
-	say(socket, 'To talk to everyone again, click on the [to X].')
-	sendImage(socket,'/img/one_toall.gif')
-}
-
-// change nickname, login, nickname rules
-function explainBasics2(socket) {
-	say(socket, 'To change nickname, click on change nickname on the corresponding menu.')
-	say(socket, 'Your nickname may be changed by server if:')
-	say(socket, '- someone already connected has this nickname')
-	say(socket, '- a user whith an account has protected this nickname by password')
-	say(socket, '- this nickname cannot be used.')
-	sendImage(socket,'/img/chg_nickname.gif')
-	say(socket, 'If you have an account, you can login by clicking on the corresponding menu.')
-	sendImage(socket,'/img/login.gif')
-}
-
-function explainAdvanced(socket) {
-	say(socket,'You, and the other users can generate a key pair.')
-	say(socket,'To do so, click on the button "Generate key".')
-	sendImage(socket,'/img/gen_key.gif')
-	say(socket,'Once you have a key pair, the public key will be sent to the server.')
-	say(socket,'Any message sent directly to you will now be ecrypted.')
-	sendImage(socket,'/img/send_secure.gif')
-	say(socket,'When you select someone on the "Connected users" list,')
-	say(socket,'you will automatically get their public key from the server,')
-	say(socket,'and any message you will send them will be encrypted.')
-	say(socket,'You can check before sending a message if it will be encrypted or not')
-	say(socket,'by looking at the shield next to the "Send" button.')
-	say(socket,'If it is green, it is secure, if not it is not.')
-	say(socket,'After sending or receiving a message, if a lock appears on the left,')
-	say(socket,'it means it has been encrypted or decrypted.')
-	sendImage(socket,'/img/send_secure2.gif')
-}
-
-// admin commands, ban
-function explainAdvanced2(socket) {
-	say(socket,'Admin commands may be executed by admin only.')
-	say(socket,'admin may "op" any user.')
-	say(socket,'If you are OP, you can ban any user, except admin.')
-	say(socket,'You can send /ban username to server.')
-	say(socket,'For exemple, to ban an user named Smith, send:')
-	say(socket,'/ban Smith')
-	say(socket,'If you are not OP, you will send "/ban Smith" in plain text to everyone.')
-	say(socket,'If you are OP, Smith will be banned.')
-	sendImage(socket,'/img/ban_demo.gif')
-}
-
-function followTutorial(socket, message) {
-	var nickname = socket.nickname
-	message = message.toLowerCase()
-	var phase = phaseTutorial(nickname)
-	switch (phase) {
-		case 'start':
-			if (message.indexOf('message')!=-1||message.indexOf('send')!=-1||message.indexOf('send to')!=-1) {
-				explainBasics(socket)
-				say(socket,'Does this answer your question?')
-				tutorialPhase[nickname] = 'finish'
-			} else if (message.indexOf('nickname')!=-1||message.indexOf('login')!=-1||message.indexOf('change')!=-1) {
-				explainBasics2(socket)
-				say(socket,'Does this answer your question?')
-				tutorialPhase[nickname] = 'finish'
-			} else if (message.indexOf('key')!=-1||message.indexOf('generate')!=-1||message.indexOf('crypt')!=-1||message.indexOf('private')!=-1) {
-				explainAdvanced(socket)
-				say(socket,'Does this answer your question?')
-				tutorialPhase[nickname] = 'finish'
-			} else if (message.indexOf('admin')!=-1||message.indexOf('command')!=-1||message.indexOf('ban')!=-1||message.indexOf('operator')!=-1) {
-				explainAdvanced2(socket)
-				say(socket,'Does this answer your question?')
-				tutorialPhase[nickname] = 'finish'
-			} else {
-				didntGetAnswer(socket)
-				say(socket,'Would you like to try again reformulating your question?')
-				tutorialPhase[nickname] = 'rephrase'
-			}
-			break
-		case 'continue':
-			if (message.indexOf('yes')!=-1) {
-				say(socket,'Ok! Let\'s continue.')
-				explainAdvanced(socket)
-				say(socket,'Did you understand everything?')
-				tutorialPhase[nickname] = 'finish'
-			} else if (message.indexOf('no')!=-1) {
-				say(socket,'Great.')
-				say(socket,'Talk to me anytime!')
-				socket.emit('help_end')
-				finishTutorial(nickname)
-			} else {
-				didntGetAnswer(socket)
-			}
-			break
-		case 'rephrase':
-			if (message.indexOf('no')!=-1) {
-				say(socket,'Would you like me to explain in detail how to use the chat,')
-				say(socket,'or only the basics?')
-				tutorialPhase[nickname] = 'tutorial'
-			} else if (message.indexOf('yes')!=-1) {
-				say(socket, 'What is your question?')
-				tutorialPhase[socket.nickname] = 'start'
-			} else {
-				didntGetAnswer(socket)
-			}
-			break
-		case 'finish':
-			if (message.indexOf('yes')!=-1) {
-				say(socket,'Great!')
-				say(socket,'Talk to me anytime!')
-				socket.emit('help_end')
-				finishTutorial(nickname)
-			} else if (message.indexOf('no')!=-1) {
-				say(socket, 'What is your question?')
-				tutorialPhase[socket.nickname] = 'start'
-			} else {
-				didntGetAnswer(socket)
-			}
-			break
-		case 'tutorial':
-			if (message.indexOf('yes')!=-1||message.indexOf('detail')!=-1||message.indexOf('everything')!=-1||message.indexOf('all')!=-1) {
-				say(socket,'Ok! Let\'s start.')
-				// send, change dest
-				explainBasics(socket)
-				// change nickname, login, nickname rules
-				explainBasics2(socket)
-				// key, message encryption
-				explainAdvanced(socket)
-				// admin commands, ban
-				explainAdvanced2(socket)
-				// finish
-				say(socket,'Did you understand everything?')
-				tutorialPhase[nickname] = 'finish'
-			} else {
-				say(socket,'Let\'s go over the basics together.')
-				explainBasics(socket)
-				explainBasics2(socket)
-				say(socket,'Do you need information about more advanced features?')
-				tutorialPhase[nickname] = 'continue'
-			}
-			break
-		default:
-			didntGetAnswer(socket)
-			break
-	}
-}
-
-function launchTutorial(socket) {
-	tutorialPhase[socket.nickname] = 'start'
-	say(socket, 'Alors '+socket.nickname+', on a besoin d\'aide ? :)')
-	say(socket, 'Pas de panique, je suis là.')
-	say(socket, 'Pose-moi ta question.')
-	socket.emit('help_start')
-}
-
 function answer(socket,message) {
 	var nickname = socket.nickname
-
-	if (tutorialPhase[nickname]) {
-		followTutorial(socket,message)
-	} else if (knownNicknames.indexOf(nickname)==-1&&specialNicknames.indexOf(nickname)==-1) {
-		if (message.toLowerCase().indexOf('yes')!=-1) {
-			launchTutorial(socket)
-		} else if (message.toLowerCase().indexOf('no')!=-1) {
-			say(socket,'Super !')
-			say(socket,'N\'hésite pas à me parler.')
-		} else {
-			say(socket,'Parlez-moi en français.')
-		}
-		knownNicknames.push(nickname)
-	} else if (message.toLowerCase().indexOf('help')!=-1||message.toLowerCase().indexOf('question')!=-1||(message.toLowerCase().indexOf('how')!=-1&&message.toLowerCase().indexOf('to')!=-1)) {
-		launchTutorial(socket)
-	} else {
-		var log = true
-		var polisson = shuffle(['Petit polisson','Canaille','Fripouille','Petit chenapan','Galopin','Sacripan'])
-		var sentence = polisson[0]+', on ne dit pas "'
-		var bw = 0
-		banned.forEach(function (word) {
-			if (message.toLowerCase().indexOf(word)!=-1) {
-				if (bw<=0) {
-					sentence += word
-				} else {
-					sentence += '", ni "' + word
-				}
-				log = false
-				++bw
+	var log = true
+	var polisson = shuffle(['Petit polisson','Canaille','Fripouille','Petit chenapan','Galopin','Sacripan'])
+	var sentence = polisson[0]+', on ne dit pas "'
+	var bw = 0
+	banned.forEach(function (word) {
+		if (message.toLowerCase().indexOf(word)!=-1) {
+			if (bw<=0) {
+				sentence += word
+			} else {
+				sentence += '", ni "' + word
 			}
+			log = false
+			++bw
+		}
+	})
+	if (!log) {
+		sentence += '" !'
+		say(socket, sentence)
+	}
+	if (message.indexOf('message')!=-1&&message.indexOf(':')!=-1) {
+		var sm = message.split(':')
+		var toa = sm.shift().split(' ')
+		var to = toa.pop().trim()
+		while (!to) {
+			to = toa.pop().trim()
+		}
+		var mail = sm.join(':').trim()
+		var from = socket.nickname
+		leaveMessage(from,to,mail)
+		say(socket,'I will send your message ("'+mail+'") to '+to+' on next connection.')
+	} else if (getWordFromSentence(message)) {
+		answerWikiWord(getWordFromSentence(message),function(zeanswer) {
+			say(socket, zeanswer)
+			logMessage('talktome',zeanswer,moment().tz("Europe/Paris").format('HH:mm'))
 		})
-		if (!log) {
-			sentence += '" !'
-			say(socket, sentence)
-		}
-		if (message.indexOf('message')!=-1&&message.indexOf(':')!=-1) {
-			var sm = message.split(':')
-			var toa = sm.shift().split(' ')
-			var to = toa.pop().trim()
-			while (!to) {
-				to = toa.pop().trim()
-			}
-			var mail = sm.join(':').trim()
-			var from = socket.nickname
-			leaveMessage(from,to,mail)
-			say(socket,'I will send your message ("'+mail+'") to '+to+' on next connection.')
-		} else if (getWordFromSentence(message)) {
-			answerWikiWord(getWordFromSentence(message),function(zeanswer) {
-				say(socket, zeanswer)
-				logMessage('talktome',zeanswer,moment().tz("Europe/Paris").format('HH:mm'))
-			})
-		} else {
-			genAnswer(socket,message)
-		}
-		
-		/*if (log) {
-			logMessage(socket.nickname,message.replace('Talktome', 'Monsieur').replace('talktome', 'monsieur').replace('ttm', 'mec'),moment().tz("Europe/Paris").format('HH:mm'))
-		}*/
-	}
-}
-
-function react(socket, message) {
-	var nickname = socket.nickname
-	var reactions = shuffle(['Je suis d\'accord avec toi, '+nickname+'.','C\'est vrai !','Je crois.',nickname+' a raison.','Je me dois d\'émettre un désaccord, '+nickname+'.'])
-	var question = shuffle(['Je ne sais pas.','Je suis simplement une machine.','Euh, '+nickname+', laisse-moi réfléchir...'])
-	var mentioned = shuffle(['Je m\'appelle talktome, mais tu peux m\'appeler ttm.','c\'est moi, talktome ! :D','Oui '+nickname+', c\'est come ça que je m\'appelle.','Oui, '+nickname+'?'])
-	if (message.indexOf('?')!=-1) {
-		sayAll(socket,question[0])
-		if (Math.random()>0.5) {
-			sayAll(socket,reactions[0])
-		}
 	} else {
-		if (message.indexOf('ttm')!=-1 || message.indexOf('talktome')!=-1) {
-			sayAll(socket,mentioned[0])
-		} else {
-			sayAll(socket,reactions[0])
-		}
+		genAnswer(socket,message)
 	}
+	
+	/*if (log) {
+		logMessage(socket.nickname,message.replace('Talktome', 'Monsieur').replace('talktome', 'monsieur').replace('ttm', 'mec'),moment().tz("Europe/Paris").format('HH:mm'))
+	}*/
 }
 
 function receive(event,data) {
@@ -581,7 +369,6 @@ function receive(event,data) {
 			if (index!=-1) {
 				infoNicknames.splice(index,1)
 			}
-			delete tutorialPhase[nickname]
 			break
 		case 'new_client':
 			var socket = data
@@ -599,24 +386,17 @@ function receive(event,data) {
 			var nickname = socket.nickname
 			var message = data.message
 			if (knownNicknames.indexOf(nickname)==-1&&infoNicknames.indexOf(nickname)==-1) {
-				if (message.toLowerCase().indexOf('yes')!=-1) {
-					launchTutorial(socket)
-				} else if (message.toLowerCase().indexOf('no')!=-1) {
-					say(socket,'Super !')
-					say(socket,'N\'hésite pas à me recontacter.')
-				} else {
-					say(socket,'Pour me parler, selectionne mon nom dans la liste "Utilisateurs connectés".')
-					infoNicknames.push(nickname)
-				}
+				say(socket,'Pour me parler, selectionne mon nom dans la liste "Utilisateurs connectés".')
+				infoNicknames.push(nickname)
 			} else {
 				if (Math.random()<0.05 || message.indexOf('ttm')!=-1 || message.indexOf('talktome')!=-1) {
-					react(socket,message)
+					getAnswer(socket,message)
 				}
 			}
 			break
 		case 'help':
 			var socket = data
-			launchTutorial(socket)
+//			launchTutorial(socket)
 		default:
 
 			break
@@ -630,13 +410,21 @@ function receive(event,data) {
 async function getAnswer(socket,message) {
   // A unique identifier for the given session
   const sessionId = uuid.v4()
-  const credentials = JSON.parse(process.env.JSON_KEY)
-  
-  // Create a new session
-  const sessionClient = new dialogflow.SessionsClient({
-	  projectId,
-	  credentials,
-  })
+  var sessionClient
+  if (process.env.JSON_KEY) {
+	  const credentials = JSON.parse(process.env.JSON_KEY)
+	  
+	  // Create a new session
+	  sessionClient = new dialogflow.SessionsClient({
+		  projectId,
+		  credentials,
+	  })
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+	  sessionClient = new dialogflow.SessionsClient()
+  } else {
+	  console.log('Problème de connexion à Google Cloud')
+  }
+
   const sessionPath = sessionClient.sessionPath(projectId, sessionId)
 
   // The text query request.
@@ -655,7 +443,12 @@ async function getAnswer(socket,message) {
   // Send request and log result
   const responses = await sessionClient.detectIntent(request)
   const result = responses[0].queryResult
-  say(socket, result.fulfillmentText)
+  if (result.fulfillmentText) {
+	  say(socket, result.fulfillmentText)
+  } else {
+	  say(socket, 'Il y a une couille dans le paté.')
+  }
+  
 }
 
 

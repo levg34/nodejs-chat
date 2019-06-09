@@ -445,10 +445,7 @@ async function getAnswer(socket,message) {
   const result = responses[0].queryResult
   if (result.fulfillmentText) {
 	  say(socket, result.fulfillmentText)
-  } else {
-	  say(socket, 'Il y a une couille dans le paté.')
   }
-  
 }
 
 

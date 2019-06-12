@@ -446,6 +446,7 @@ async function getAnswer(socket,message) {
   if (result.fulfillmentText) {
 	  say(socket, result.fulfillmentText)
   }
+  console.log(responses)
 }
 
 
